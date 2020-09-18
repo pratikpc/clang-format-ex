@@ -2,7 +2,7 @@
 
 import glob from 'fast-glob';
 
-import { Show } from './util/Display';
+import { DEFAULT_EMPTY_STDOUT, Show } from './util/Display';
 import IgnoreReader from './util/IgnoreReader';
 import Preprocess from './util/Preprocess';
 import ClangFormat from './cmd';
@@ -23,11 +23,17 @@ async function Run() {
     );
 
     const files = await glob(sources, {
-        ignore: ['.git',...await ignoreReader.Read],
+        ignore: ['.git', ...(await ignoreReader.Read)],
         dot: true
     });
+    const promises: Promise<
+        typeof DEFAULT_EMPTY_STDOUT
+    >[] = [];
 
-    return ClangFormat([...commands, ...files]);
+    for (const file of files)
+        promises.push(ClangFormat([...commands, file]));
+    await Promise.all(promises);
+    return DEFAULT_EMPTY_STDOUT;
 }
 
 Run()
