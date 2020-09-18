@@ -10,3 +10,4 @@ temp
 .prettierrc.json
 dist/tsconfig.tsbuildinfo
 .prettierignore
+.github/
