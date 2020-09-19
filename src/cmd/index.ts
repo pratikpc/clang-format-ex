@@ -2,25 +2,33 @@ import { spawn } from 'child_process';
 import { red, white } from 'colors/safe';
 import type { DEFAULT_EMPTY_STDOUT } from '../util/Display';
 
-async function RunCommand(
+export async function RunCommand(
     app: Readonly<string>,
-    commands: readonly string[] = []
+    commands_: readonly string[] = [],
+    streamOutputToUserOnScreen = true
 ) {
+    const commands = commands_
+        .map((command) => command.trim())
+        .filter((command) => command.length > 0);
+
     return await new Promise<typeof DEFAULT_EMPTY_STDOUT>(
         (resolve, reject) => {
             let stdout = '';
             let stderr = '';
             const run = spawn(app, commands);
-
             run.stdout.on('data', (data: Buffer) => {
-                process.stdout.write(
-                    white(data.toString())
-                );
+                if (streamOutputToUserOnScreen)
+                    process.stdout.write(
+                        white(data.toString())
+                    );
                 stdout += data;
             });
             run.on('error', (err) => reject(err));
             run.stderr.on('data', (data: Buffer) => {
-                process.stderr.write(red(data.toString()));
+                if (streamOutputToUserOnScreen)
+                    process.stderr.write(
+                        red(data.toString())
+                    );
                 stderr += data;
             });
             run.on('close', (code) => {
@@ -29,13 +37,17 @@ async function RunCommand(
                     resolve({
                         stdout: stdout,
                         stderr: stderr,
-                        show: false
+                        // If the Output has already been outputted to the screen
+                        // Do not Output it again
+                        show: !streamOutputToUserOnScreen
                     });
             });
         }
     );
 }
 
-export default async function ClangFormat(commands: string[]) {
+export default async function ClangFormat(
+    commands: string[]
+) {
     return await RunCommand('clang-format', commands);
 }

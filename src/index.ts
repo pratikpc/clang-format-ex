@@ -6,6 +6,7 @@ import { DEFAULT_EMPTY_STDOUT, Show } from './util/Display';
 import IgnoreReader from './util/IgnoreReader';
 import Preprocess from './util/Preprocess';
 import ClangFormat from './cmd';
+import IgnoredFiles from './cmd/git';
 
 const argv = process.argv.splice(2);
 
@@ -14,6 +15,8 @@ async function Run() {
         '.gitignore',
         '.clang-format-ignore'
     );
+    await IgnoredFiles();
+    console.log();
     const sources = Preprocess(argv);
     // Set Default Value
     if (sources.length === 0)
@@ -23,16 +26,18 @@ async function Run() {
     );
 
     const files = await glob(sources, {
-        ignore: ['.git', ...(await ignoreReader.Read)],
+        ignore: [
+            '.git',
+            ...(await ignoreReader.Read),
+            ...(await IgnoredFiles())
+        ],
         dot: true
     });
-    const promises: Promise<
-        typeof DEFAULT_EMPTY_STDOUT
-    >[] = [];
 
-    for (const file of files)
-        promises.push(ClangFormat([...commands, file]));
-    await Promise.all(promises);
+    for (const file of files) {
+        // eslint-disable-next-line no-await-in-loop
+        await ClangFormat([...commands, file]);
+    }
     return DEFAULT_EMPTY_STDOUT;
 }
 
